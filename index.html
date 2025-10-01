@@ -617,14 +617,12 @@
             return userAgent.includes('line') || userAgent.includes('lineapp');
         }
 
-        // --- START: NEW EMBEDDED VIEWER CODE ---
+        // --- START: FULLSCREEN EMBEDDED VIEWER CODE ---
 
         /**
          * 1. ฟังก์ชันหลักที่จะทำงานเมื่อผู้ใช้คลิกไฟล์
-         * จะเรียกใช้ฟังก์ชันเพื่อแสดงตัว viewer
          */
         function openFile(fileId, fileName) {
-            // ตรวจสอบให้แน่ใจว่า fileId ไม่ใช่ค่าว่าง
             if (!fileId) {
                 showError('File ID ไม่ถูกต้อง ไม่สามารถเปิดไฟล์ได้');
                 return;
@@ -633,55 +631,63 @@
         }
 
         /**
-         * 2. ฟังก์ชันสำหรับแสดงหน้าตัวดูไฟล์แบบฝัง (Embedded Viewer)
+         * 2. ฟังก์ชันสำหรับแสดงหน้าตัวดูไฟล์แบบ "เต็มจอ"
          */
         function showFileViewer(fileId, fileName) {
-            const contentArea = document.getElementById('contentArea');
-            const navArea = document.querySelector('nav');
-
-            // ซ่อนส่วน navigation และ header ชั่วคราว
-            navArea.style.display = 'none';
-            document.querySelector('.text-center.mb-6.md\\:mb-8').style.display = 'none';
+            // สร้าง Element หลักสำหรับ Overlay เต็มจอ
+            const overlay = document.createElement('div');
+            overlay.id = 'fileViewerOverlay';
+            overlay.className = 'fixed inset-0 bg-gray-900 z-50 flex flex-col p-2 md:p-4'; // `inset-0` คือ top, right, bottom, left = 0
 
             // สร้าง URL สำหรับการฝัง (embed)
-            // นี่คือ URL พิเศษที่ออกแบบมาสำหรับการแสดงผลใน iframe
             const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
 
-            // เปลี่ยนเนื้อหาใน contentArea ให้เป็นตัว viewer
-            contentArea.innerHTML = `
-                <div class="file-viewer-container bg-gray-800 text-white p-2 md:p-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <p class="text-sm font-semibold truncate px-2">${fileName}</p>
-                        <button 
-                            onclick="closeFileViewer()" 
-                            class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                            ปิด
-                        </button>
-                    </div>
-                    <iframe 
-                        src="${embedUrl}" 
-                        class="w-full h-[80vh] border-0 rounded-lg" 
+            // กำหนดโครงสร้าง HTML ของ Overlay
+            overlay.innerHTML = `
+                <div class="flex items-center justify-between mb-2 flex-shrink-0">
+                    <p class="text-sm font-semibold truncate px-2 text-white">${fileName}</p>
+                    <button
+                        onclick="closeFileViewer()"
+                        class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        ปิด
+                    </button>
+                </div>
+
+                <div class="flex-grow h-full">
+                    <iframe
+                        src="${embedUrl}"
+                        class="w-full h-full border-0 rounded-lg bg-white"
                         allow="fullscreen">
                     </iframe>
                 </div>
             `;
+
+            // ซ่อนเนื้อหาหลักของเว็บ
+            document.querySelector('.container').style.display = 'none';
+            document.querySelector('.demo-notice').style.display = 'none';
+
+            // เพิ่ม Overlay ที่สร้างขึ้นเข้าไปใน <body>
+            document.body.appendChild(overlay);
         }
 
         /**
          * 3. ฟังก์ชันสำหรับปิดตัว Viewer และกลับไปหน้ารายการไฟล์
          */
         function closeFileViewer() {
-            const navArea = document.querySelector('nav');
+            // ค้นหาและลบ Overlay ออกจากหน้าเว็บ
+            const overlay = document.getElementById('fileViewerOverlay');
+            if (overlay) {
+                document.body.removeChild(overlay);
+            }
 
-            // แสดงส่วน navigation และ header กลับมาเหมือนเดิม
-            navArea.style.display = 'flex';
-            document.querySelector('.text-center.mb-6.md\\:mb-8').style.display = 'block';
+            // แสดงเนื้อหาหลักของเว็บที่ซ่อนไว้กลับคืนมา
+            document.querySelector('.container').style.display = 'block';
+            document.querySelector('.demo-notice').style.display = 'block';
 
-            // โหลดข้อมูลโฟลเดอร์ล่าสุดกลับมาแสดง
-            displayFolders(currentFolderId);
+            // ไม่จำเป็นต้องโหลดข้อมูลใหม่ เพราะเราแค่ซ่อนไว้เฉยๆ
         }
 
-        // --- END: NEW EMBEDDED VIEWER CODE ---
+        // --- END: FULLSCREEN EMBEDDED VIEWER CODE ---
 
         
         // Function to show notification
@@ -744,5 +750,5 @@
         updateConnectionStatus(true); // เชื่อมต่ออัตโนมัติ
         displayFolders();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9878c2ddc4e47328',t:'MTc1OTI4ODE2Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9878d73ee6127328',t:'MTc1OTI4OTAwMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
